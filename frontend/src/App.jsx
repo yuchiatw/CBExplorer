@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import RenderOptions from './components/options'
+import ImageDisplay from './components/image_display'
+import Generator from './components/generator'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
@@ -7,28 +10,23 @@ function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="flex flex-col min-h-screen">
+      <header className="flex flex-row header-container bg-zinc-900 text-center text-white py-4 px-8 text-xl">
+        <h2 className="text-left text-2xl">CBExplorer</h2>
+        <label htmlFor="bar-select" className="mx-2">
+          <select id = 'bar-select' className="bg-gray-200 text-black p-2 rounded mx-2">
+              <RenderOptions />
+          </select>
+        </label>
+      </header>
+      <main>
+        <div className="flex flex-col items-center justify-center p-10">
+          <ImageDisplay />
+        </div>
+      </main>
+      <footer></footer>
+    </div>
+
   )
 }
 
