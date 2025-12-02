@@ -4,6 +4,10 @@ from torch.nn import functional as F
 import numpy as np
 from models.basic import Basic
 import pickle
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).parent.parent
+
 
 def _weights_init(m):
     classname = m.__class__.__name__
@@ -70,7 +74,7 @@ class CB_AE(nn.Module):
 
 class cbAE_StyGAN2(Basic):
     def _build_model(self):
-        pretrained_model_path = self.config['model']['pretrained']
+        pretrained_model_path = PROJECT_ROOT / self.config['model']['pretrained']
         print(f'loading stylegan2 from {pretrained_model_path}')
         with open(pretrained_model_path, 'rb') as f:
             self.gen = pickle.load(f)['G_ema']
@@ -115,7 +119,7 @@ class CC(nn.Module):
 
 class CC_StyGAN2(Basic):
     def _build_model(self):
-        pretrained_model_path = self.config['model']['pretrained']
+        pretrained_model_path = PROJECT_ROOT / self.config['model']['pretrained']
         print(f'loading stylegan2 from {pretrained_model_path}')
         with open(pretrained_model_path, 'rb') as f:
             self.gen = pickle.load(f)['G_ema']
