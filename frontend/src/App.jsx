@@ -20,8 +20,9 @@ function App() {
         </label>
       </header>
       <main>
-        <div className="flex flex-col items-center justify-center p-10">
-          <ImageDisplay />
+        <div className="flex flex-row items-center justify-center p-10 gap-10">
+          <Generator className="h-10"/>
+          <ImageDisplay className="h-10"/>
         </div>
       </main>
       <footer></footer>
