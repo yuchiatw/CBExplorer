@@ -7,6 +7,7 @@ import yaml
 import torch
 import numpy as np
 import itertools
+from torch.autograd import Variable
 from pathlib import Path
 from PIL import Image
 
@@ -16,8 +17,8 @@ checkpoints_root = Path(__file__).parent / "posthoc_generative_cbm" / "models" /
 from backend.posthoc_generative_cbm.models import cbae_stygan2
 from backend.posthoc_generative_cbm.CE_utils import (
     get_concept_index,
-    opt_int_multi,
 )
+from backend.posthoc_generative_cbm.eval.eval_intervention_gan import opt_int
 
 
 # Global model cache to avoid reloading
@@ -158,64 +159,76 @@ def _synthesize_latent_to_pil(model, latent):
 
 def _extract_concept_values(model, concept_logits, num_concepts):
     """
-    Convert concept logits into discrete concept predictions.
+    Convert concept logits into discrete concept predictions and probability distributions.
     """
     concept_values = []
+    concept_probs = []
     for concept_idx in range(num_concepts):
         start, end = get_concept_index(model, concept_idx)
         concept_slice = concept_logits[:, start:end]
-        concept_values.append(int(torch.argmax(concept_slice, dim=1).item()))
-    return concept_values
+        
+        # Calculate probabilities
+        probs = torch.softmax(concept_slice, dim=1)
+        
+        # Get probability of class 1 (assuming binary concepts)
+        prob_1 = probs[:, 1].item()
+        concept_probs.append(prob_1)
+        
+        # Determine discrete value (1 if > 0.5 else 0)
+        concept_values.append(1 if prob_1 > 0.5 else 0)
+        
+    return concept_values, concept_probs
 
 
-def generate_image_from_combination(seed, combination, dataset='cub', 
+
+
+def sample_cbm(seed, combination=None, dataset='cub', 
                                     expt_name='cbae_stygan2',
-                                    device='cuda:0',
-                                    return_concepts=False):
+                                    device='cuda:0'):
     """
     Generate an image for a specific seed and concept combination.
     
     Args:
         seed: Random seed for latent generation
-        combination: Binary combination string (e.g., "01101011") or tuple (0,1,1,0,1,0,1,1)
+        combination: Binary combination string (e.g., "01101011") or tuple (0,1,1,0,1,0,1,1). If None, no intervention.
         dataset: Dataset name
         expt_name: Experiment name
-        tensorboard_name: Tensorboard checkpoint name
         device: Device to use
-        return_concepts: If True, return (image, concept_values) tuple
         
     Returns:
-        PIL Image object, or (PIL Image, concept_values list) if return_concepts=True
+        tuple: (PIL Image, concept_values list, concept_probs list)
     """
     # Initialize model (uses cache if already loaded)
-    model, _ = initialize_model(dataset, expt_name, device)
+    model, (_, concept_names) = initialize_model(dataset, expt_name, device)
     
-    # Normalize combination input
-    combination = _normalize_combination(combination)
-    num_concepts = len(combination)
+    num_concepts = len(concept_names)
+    if combination is not None:
+        # Normalize combination input
+        combination = _normalize_combination(combination)
     
     # Sample latent for seed
     latent = _sample_latent_for_seed(model, seed, device)
     
     # Get original concepts and adjust logits directly
     concepts = model.cbae.enc(latent)
-    new_concepts = manipulate_concepts(model, concepts, combination)
+    
+    if combination is not None:
+        new_concepts = manipulate_concepts(model, concepts, combination)
+    else:
+        new_concepts = concepts
     
     # Decode and synthesize image
     new_latent = model.cbae.dec(new_concepts)
     pil_image = _synthesize_latent_to_pil(model, new_latent)
     
-    if return_concepts:
-        concept_values = _extract_concept_values(model, new_concepts, num_concepts)
-        return pil_image, concept_values
-    return pil_image
+    concept_values, concept_probs = _extract_concept_values(model, new_concepts, num_concepts)
+    return pil_image, concept_values, concept_probs
 
 
-def generate_image_from_combination_opt_int(seed, combination, dataset='cub',
+def sample_cbm_opt(seed, combination=None, dataset='cub',
                                             expt_name='cbae_stygan2',
                                             device='cuda:0',
-                                            return_concepts=False,
-                                            optint_iters=50,
+                                            optint_iters=1000,
                                             optint_eps=1e-1):
     """
     Generate an image for a specific seed and concept combination using
@@ -223,43 +236,101 @@ def generate_image_from_combination_opt_int(seed, combination, dataset='cub',
     
     Args:
         seed: Random seed for latent generation.
-        combination: Binary combination string or iterable (e.g., "01101011").
+        combination: Binary combination string or iterable (e.g., "01101011"). If None, no intervention.
         dataset: Dataset name.
         expt_name: Experiment name.
         device: Device to use.
-        return_concepts: If True, returns (PIL Image, concept_values list).
         optint_iters: Number of optimization iterations per concept.
         optint_eps: L-infinity norm bound for the opt_int updates.
     
     Returns:
-        PIL Image object, or (PIL Image, concept_values list) if return_concepts=True.
+        tuple: (PIL Image, concept_values list, concept_probs list)
     """
-    model, _ = initialize_model(dataset, expt_name, device)
+    model, (_, concept_names) = initialize_model(dataset, expt_name, device)
     
-    # Normalize combination input
-    combination = _normalize_combination(combination)
-    num_concepts = len(combination)
+    num_concepts = len(concept_names)
+    if combination is not None:
+        # Normalize combination input
+        combination = _normalize_combination(combination)
     
     # Sample latent for seed
     latent = _sample_latent_for_seed(model, seed, device)
     
-    # Apply multi-concept optimization in a single pass
-    new_latent = opt_int_multi(
-        model=model,
-        latent=latent.clone(),
-        concept_values=[int(val) for val in combination],
-        num_iters=optint_iters,
-        eps=optint_eps,
-        device=device,
-    ).detach()
+    # Apply optimization if combination is provided
+    if combination is not None:
+        # Get original concept values
+        with torch.no_grad():
+            original_concepts_logits = model.cbae.enc(latent)
+            orig_values, _ = _extract_concept_values(model, original_concepts_logits, num_concepts)
+        
+        # Identify changing concepts (just for logging, we optimize all)
+        diff_indices = [i for i, (a, b) in enumerate(zip(orig_values, combination)) if a != b]
+        
+        
+        # Optimization setup
+        noise = torch.zeros_like(latent, requires_grad=True, device=device)
+        criterion = torch.nn.MSELoss()
+
+        # PGD parameters
+        alpha = 2.5 * optint_eps / optint_iters
+        
+        for i in range(optint_iters):
+            if noise.grad is not None:
+                noise.grad.zero_()
+            
+            adv_latent = latent + noise
+            current_logits = model.cbae.enc(adv_latent)
+            
+            loss = 0.0
+            # Optimize for ALL concepts in the combination
+            for idx in range(num_concepts):
+                start, end = get_concept_index(model, idx)
+                
+                # Construct target for MSE loss (one-hot-like)
+                num_cls = end - start
+                target_tensor = torch.zeros((latent.shape[0], num_cls), device=device)
+                target_val_idx = combination[idx]
+                target_tensor[:, target_val_idx] = 1.0
+                
+                loss += criterion(current_logits[:, start:end], target_tensor)
+            
+            loss.backward()
+            
+            with torch.no_grad():
+                # Gradient descent on the loss (minimize MSE)
+                noise_grad = noise.grad.sign()
+                noise -= alpha * noise_grad
+                noise = torch.clamp(noise, -optint_eps, optint_eps)
+                noise.requires_grad = True
+                
+        new_latent = latent + noise.detach()
+        
+        with torch.no_grad():
+            final_logits = model.cbae.enc(new_latent)
+            final_loss = 0.0
+            for idx in range(num_concepts):
+                start, end = get_concept_index(model, idx)
+                
+                num_cls = end - start
+                target_tensor = torch.zeros((latent.shape[0], num_cls), device=device)
+                target_val_idx = combination[idx]
+                target_tensor[:, target_val_idx] = 1.0
+                
+                final_loss += criterion(final_logits[:, start:end], target_tensor).item()
+        print(f"Optimization finished. Final MSE Loss on all concepts: {final_loss:.6f}")
+            
+    else:
+        new_latent = latent
+    
+    old_concepts = model.cbae.enc(latent)
+    new_concepts = model.cbae.enc(new_latent)
+
     
     pil_image = _synthesize_latent_to_pil(model, new_latent)
     
-    if return_concepts:
-        updated_concepts = model.cbae.enc(new_latent)
-        concept_values = _extract_concept_values(model, updated_concepts, num_concepts)
-        return pil_image, concept_values
-    return pil_image
+    updated_concepts = model.cbae.enc(new_latent)
+    concept_values, concept_probs = _extract_concept_values(model, updated_concepts, num_concepts)
+    return pil_image, concept_values, concept_probs
 
 
 def get_concept_names(dataset='cub', expt_name='cbae_stygan2'):

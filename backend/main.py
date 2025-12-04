@@ -8,8 +8,8 @@ import io
 import base64
 from backend.CE_main import (
     get_concept_names,
-    generate_image_from_combination,
-    generate_image_from_combination_opt_int,
+    sample_cbm,
+    sample_cbm_opt,
 )
 
 # Initialize FastAPI app
@@ -59,29 +59,16 @@ async def get_concepts(experiment: str, dataset: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading concepts: {str(e)}")
 
-@app.get("/generate/{experiment}/{dataset}/{seed}")
-async def generate_image(experiment: str, dataset: str, seed: int, bit: str):
+
+def _process_generation_request(experiment: str, dataset: str, seed: int, bit: str = None):
     """
-    Dynamically generate an image using the CB-AE model.
-    Returns both the image (as base64) and the concept values (argmax for each concept).
-    
-    Args:
-        experiment: Name of the experiment (e.g., 'cbae_stygan2', 'cc_stygan2')
-        dataset: Name of the dataset (e.g., 'cub', 'celebahq')
-        seed: Seed number for latent generation
-        bit: Binary string representing concept combination (e.g., "01101011")
-        
-    Returns:
-        JSON response with:
-        - image: base64-encoded PNG image
-        - concept_values: list of argmax values for each concept
-        - requested_combination: the input bit string
-        - seed: the seed used
+    Helper function to process generation requests.
     """
     try:
-        # Validate bit string
-        if not all(c in '01' for c in bit):
-            raise HTTPException(status_code=400, detail="Bit string must contain only 0s and 1s")
+        # Validate bit string if provided
+        if bit is not None:
+            if not all(c in '01' for c in bit):
+                raise HTTPException(status_code=400, detail="Bit string must contain only 0s and 1s")
             
         # Choose generator implementation based on experiment type
         experiment_lower = experiment.lower()
@@ -92,13 +79,12 @@ async def generate_image(experiment: str, dataset: str, seed: int, bit: str):
             dataset=dataset,
             expt_name=experiment,
             device=device,
-            return_concepts=True,
         )
         
         if 'cc' in experiment_lower:
-            generator_fn = generate_image_from_combination_opt_int
+            generator_fn = sample_cbm_opt
         elif 'cbae' in experiment_lower:
-            generator_fn = generate_image_from_combination
+            generator_fn = sample_cbm
         else:
             raise HTTPException(
                 status_code=400,
@@ -106,7 +92,7 @@ async def generate_image(experiment: str, dataset: str, seed: int, bit: str):
             )
         
         print(f"Generating image for: {experiment}/{dataset}/seed={seed}/bit={bit} using {generator_fn.__name__}")
-        pil_image, concept_values = generator_fn(**generator_kwargs)
+        pil_image, concept_values, concept_probs = generator_fn(**generator_kwargs)
         
         # Convert PIL image to base64
         img_byte_arr = io.BytesIO()
@@ -118,6 +104,7 @@ async def generate_image(experiment: str, dataset: str, seed: int, bit: str):
         return JSONResponse(content={
             "image": f"data:image/png;base64,{img_base64}",
             "concept_values": concept_values,
+            "concept_probs": concept_probs,
             "requested_combination": bit,
             "seed": seed,
             "experiment": experiment,
@@ -126,5 +113,42 @@ async def generate_image(experiment: str, dataset: str, seed: int, bit: str):
         
     except ImportError as e:
         raise HTTPException(status_code=500, detail=f"Model loading error: {str(e)}")
+    except HTTPException as e:
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image generation error: {str(e)}")
+
+
+@app.get("/generate/{experiment}/{dataset}/{seed}")
+async def generate_sample(experiment: str, dataset: str, seed: int):
+    """
+    Dynamically generate an image using the CB model without concept intervention.
+    Returns both the image (as base64) and the concept values (argmax for each concept).
+    
+    Args:
+        experiment: Name of the experiment (e.g., 'cbae_stygan2', 'cc_stygan2')
+        dataset: Name of the dataset (e.g., 'cub', 'celebahq')
+        seed: Seed number for latent generation
+        
+    Returns:
+        JSON response with image, concept values, and probabilities.
+    """
+    return _process_generation_request(experiment, dataset, seed)
+
+
+@app.get("/manipulate/{experiment}/{dataset}/{seed}")
+async def manipulate_sample(experiment: str, dataset: str, seed: int, bit: str):
+    """
+    Dynamically generate an image using the CB model with concept intervention.
+    Returns both the image (as base64) and the concept values (argmax for each concept).
+    
+    Args:
+        experiment: Name of the experiment (e.g., 'cbae_stygan2', 'cc_stygan2')
+        dataset: Name of the dataset (e.g., 'cub', 'celebahq')
+        seed: Seed number for latent generation
+        bit: Binary string representing concept combination (e.g., "01101011")
+        
+    Returns:
+        JSON response with image, concept values, and probabilities.
+    """
+    return _process_generation_request(experiment, dataset, seed, bit)
