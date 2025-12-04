@@ -1,11 +1,10 @@
-import { useState } from 'react';
-export default function ImageDisplay() {
-    const [setName, setSetName] = useState('celeb');
-    // const [filename, setFilename] = useState('00000000.png');
+import { useState, useEffect } from 'react';
+export default function ImageDisplay({dataset, experiment}) {
+
+    const [concepts, setConcepts] = useState([]);
     const [bits, setBits] = useState(Array(8).fill(0));
     const filename = bits.map(bit => bit.toString()).join('') + '.png';
 
-    const path = `/${setName}/${filename}`;
 
     const toggleBit = (index) => {
         setBits(prev => {
@@ -14,6 +13,20 @@ export default function ImageDisplay() {
             return next;
         });
     };
+
+    useEffect(() => {
+        fetch("http://localhost:8000/concepts/"+dataset+"/"+experiment)
+        .then(response => response.json())
+        .then(data => {
+            console.log("Fetched concepts:", data);
+            
+            // You can use the fetched data to set up your component state if needed
+        })
+        .catch(error => {
+            console.error("Error fetching concepts:", error);
+        });
+    }, [dataset, experiment]);
+    
 
     return (
         <div className="flex flex-row gap-4 items-center">
