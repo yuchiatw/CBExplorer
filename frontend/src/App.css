@@ -38,8 +38,8 @@
 .switch {
   position: relative;
   display: inline-block;
-  width: 60px;
-  height: 34px;
+  width: 34px;
+  height: 20px;
 }
 
 .switch input { 
@@ -63,10 +63,10 @@
 .slider:before {
   position: absolute;
   content: "";
-  height: 26px;
-  width: 26px;
-  left: 4px;
-  bottom: 4px;
+  height: 15px;
+  width: 15px;
+  left: 2px;
+  bottom: 2px;
   background-color: white;
   -webkit-transition: .4s;
   transition: .4s;
@@ -81,9 +81,9 @@ input:focus + .slider {
 }
 
 input:checked + .slider:before {
-  -webkit-transform: translateX(26px);
-  -ms-transform: translateX(26px);
-  transform: translateX(26px);
+  -webkit-transform: translateX(15px);
+  -ms-transform: translateX(15px);
+  transform: translateX(15px);
 }
 .attr-text {
   font-size: 0.75em;
@@ -95,4 +95,33 @@ input:checked + .slider:before {
 
 .read-the-docs {
   color: #888;
+}
+
+.my-button {
+  background-color: azure;
+  border: none;
+  border-radius: 5%;
+  color: black;
+  padding: 10px 24px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+}
+
+@keyframes flow {
+  0% {
+    stroke-dashoffset: 200;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.highlight-animate {
+  stroke: #00b3ff;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 200;   /* total length of line */
+  animation: flow 1.2s ease-out forwards;
 }
