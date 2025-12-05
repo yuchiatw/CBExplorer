@@ -11,7 +11,7 @@ function App() {
   const [dataset, setDataset] = useState('celebahq')
   const [experiment, setExperiment] = useState('cbae_stygan2')
   const [concepts, setConcepts] = useState([]);
-  const [seed, setSeed] = useState(60);
+  const [seed, setSeed] = useState(30);
 
   const [originalImageSrc, setOriginalImageSrc] = useState('');
   const [conceptLogits, setConceptLogits] = useState([]);
@@ -89,26 +89,27 @@ function App() {
           </select>
         </label>
       </header>
-      <main className="flex flex-col items-center flex-grow">
+      <main className="flex flex-col items-center align-left">
         <div className="flex flex-row items-center justify-center p-10 gap-10">
           <Generator className="h-10" />
-          <ImageDisplay
-            className="h-10"
-            concepts={concepts}
-            imageSrc={originalImageSrc}
-            conceptLogits={conceptLogits}
-          />
-        </div>
-        <div>
-          <ManipulateImage
-            className="h-10"
-            dataset={dataset}
-            experiment={experiment}
-            concepts={concepts}
-            bits={bits}
-            setBits={setBits}
-            seed={seed}
-          />
+          <div className='flex flex-col'>
+            <ImageDisplay
+              className="h-10"
+              concepts={concepts}
+              imageSrc={originalImageSrc}
+              conceptLogits={conceptLogits}
+            />
+            <ManipulateImage
+              className="h-10"
+              dataset={dataset}
+              experiment={experiment}
+              concepts={concepts}
+              bits={bits}
+              setBits={setBits}
+              seed={seed}
+            />
+          </div>
+
         </div>
       </main>
       <footer></footer>
