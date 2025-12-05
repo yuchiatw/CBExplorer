@@ -105,16 +105,17 @@ input:checked+.slider:before {
   color: #888;
 }
 
-.my-button {
+.generate-button {
   background-color: azure;
   border: none;
   border-radius: 5%;
   color: black;
-  padding: 10px 24px;
+  padding: 10px;
   text-align: center;
   text-decoration: none;
   display: inline-block;
   font-size: 16px;
+  width: 100px;
 }
 
 @keyframes flow {
@@ -150,10 +151,12 @@ input:checked+.slider:before {
 .button-negative {
   background-color: pink;
   border: solid black 2px;
+  color: white;
+
 }
 
 .button-unavailable {
-  background-color: grey;
+  background-color: #ccc;
   color: white;
   pointer-events: none;
   border: 2px dashed grey;
@@ -164,7 +167,7 @@ input:checked+.slider:before {
   border-bottom: 2px solid black;
   padding: 4px 0;
   outline: none;
-  width: 200px;
+  width: 50px;
 }
 
 .underline-input:focus {

@@ -4,7 +4,8 @@ export default function ImageDisplay(
     {
         concepts,
         imageSrc,
-        conceptLogits
+        conceptLogits,
+        mappedConcepts
     }
 ) {
 
@@ -24,8 +25,8 @@ export default function ImageDisplay(
             <div>
                 <img src={imageSrc} alt="Generated" style={{ maxWidth: '256px', height: 'auto' }} />
             </div>
-            <div>
-                <BarChart concepts={concepts} conceptLogits={conceptLogits} />
+            <div className="bg-zinc-100 p-4 rounded-lg">
+                <BarChart concepts={concepts} conceptLogits={conceptLogits} mappedConcepts={mappedConcepts} />
             </div>
 
 
