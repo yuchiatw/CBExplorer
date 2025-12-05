@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react'
-import RenderOptions from './components/options'
 import ImageDisplay from './components/image_display'
-import Generator from './components/generator'
-import ManipulateImage from './components/manipulate_image'
 import './App.css'
 const colorcode = ['steelblue', 'pink', 'grey'];
 function App() {
@@ -11,7 +8,9 @@ function App() {
   const [dataset, setDataset] = useState('celebahq')
   const [experiment, setExperiment] = useState('cbae_stygan2')
   const [concepts, setConcepts] = useState([]);
-  const [seed, setSeed] = useState(30);
+  const [draftValue, setDraftValue] = useState(42);
+  const [value, setValue] = useState(42); // This triggers useEffect
+  const [seed, setSeed] = useState(42);
 
   const [imageSrc, setImageSrc] = useState('');
   const [th, setTh] = useState(0.1);
@@ -70,9 +69,7 @@ function App() {
       .catch(error => {
         console.error("Error generating image:", error);
       });
-  }, [dataset, experiment, seed]);
 
-  useEffect(() => {
     fetch("http://localhost:8000/manipulate/" + experiment + "/" + dataset + "/" + seed + '?bit=' + bits.join(''))
       .then(response => response.json())
       .then(data => {
@@ -88,7 +85,7 @@ function App() {
       .catch(error => {
         console.error("Error generating image:", error);
       });
-  }, [dataset, experiment, seed, bits]);
+  }, [dataset, experiment, bits]);
 
 
 
@@ -132,7 +129,8 @@ function App() {
         </label>
       </header>
       <main className="flex flex-row items-center justify-center">
-        <input type="text" className="underline-input" placeholder="Type here..." onChange={e => setSeed(e.target.value)} />
+        {/* <input type="text" className="underline-input" placeholder="Type here..." value={draftValue} onChange={e => setDraftValue(e.target.value)} />
+        <button className="generate-button" onClick={() => setSeed(draftSeed)}>Generate</button> */}
         <div className="flex flex-row items-start gap-0 mt-20">
           <div
             className='mt-30'

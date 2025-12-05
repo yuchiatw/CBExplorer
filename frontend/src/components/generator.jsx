@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 export default function Generator() {
     const [expanded, setExpanded] = useState(false);
-    const [animate, setAnimate] = useState(false);
 
     const [x, setX] = useState(40);
     const start = () => {
