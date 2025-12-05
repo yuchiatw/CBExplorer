@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import BarChart from './barchart';
-export default function Intervene(
+export default function ImageDisplay(
     {
         concepts,
         imageSrc,
@@ -20,21 +20,14 @@ export default function Intervene(
 
 
     return (
-        <div className="flex flex-row gap-4 items-center">
+        <div className="flex flex-row gap-4 items-center justify-center">
             <div>
                 <img src={imageSrc} alt="Generated" style={{ maxWidth: '256px', height: 'auto' }} />
             </div>
             <div>
                 <BarChart concepts={concepts} conceptLogits={conceptLogits} />
             </div>
-            {/* <div>
-                <svg>
-                    {bits.map((bit, idx) => )}
-                </svg>
-                
-            </div> */}
 
-            {/* 8 toggle switches */}
 
 
         </div>

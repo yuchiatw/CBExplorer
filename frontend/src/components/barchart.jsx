@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import { useEffect, useRef } from 'react';
 
-const margin = { top: 20, right: 30, bottom: 40, left: 70 };
+const margin = { top: 20, right: 30, bottom: 20, left: 70 };
 const data = [0.5, 0.6, 0.8, 0.4, 0.9, 0.7, 0.3, 0.2, 1.0, 0.55];
 
 export default function BarChart({ concepts, conceptLogits }) {
@@ -18,11 +18,11 @@ export default function BarChart({ concepts, conceptLogits }) {
         }
     }, [concepts, conceptLogits]);
     return (
-        <div ref={containerRef} style={{ width: "400px", height: "400px" }}>
+        <div ref={containerRef} style={{ width: "400px", height: "300px" }}>
             <svg
                 ref={svgRef}
                 width={400}
-                height={400}
+                height={300}
             ></svg>
         </div>
     );
