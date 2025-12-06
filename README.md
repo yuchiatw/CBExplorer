@@ -36,8 +36,9 @@ Implementation of Concept Bottleneck Explorer for ECS289H. CBExplorer is a visua
 
 # Run Frontend 
 
-    ```
-    cd /CBExplorer/frontend
-    npm install
-    npm run dev
-    ```
+
+```
+cd /CBExplorer/frontend
+npm install
+npm run dev
+```
